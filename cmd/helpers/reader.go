@@ -4,64 +4,34 @@ Copyright © 2022 Hubert Pawlak <hubertpawlak.dev>
 package helpers
 
 import (
-	"log"
-	"runtime"
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/afero"
-	"github.com/spf13/viper"
 )
 
-var sensorsPath string
+var SensorsPath string = "/sys/bus/w1/devices"
 
-// Make it easy to swap for a fake FS
-var fs = afero.NewOsFs()
-var afs = afero.Afero{Fs: fs}
-
-func switchToFakeFs() {
-	fs = afero.NewMemMapFs()
-	afs.Fs = fs
-	afs.MkdirAll(sensorsPath, 0750)
-	afs.Mkdir(sensorsPath+"/w1_bus_master1", 0750)
-	afs.WriteFile(sensorsPath+"/28-000000000001/temperature", []byte("12345\n"), 0740)
-	afs.WriteFile(sensorsPath+"/28-000000000001/resolution", []byte("8\n"), 0740)
-	afs.WriteFile(sensorsPath+"/28-000000000002/temperature", []byte("102000\n"), 0740)
-	afs.WriteFile(sensorsPath+"/28-000000000002/resolution", []byte("12\n"), 0740)
-}
-
-func AutoFakeSensors() {
-	// Check if faking MUST be enabled
-	if fakingEnabled, os := viper.GetBool("fakeData"), runtime.GOOS; !fakingEnabled && os != "linux" {
-		viper.Set("fakeData", true)
-		log.Printf("Forced fake readings due to OS incompatibility")
-	}
-	// Setup fake sensors
-	if fakingEnabled := viper.GetBool("fakeData"); fakingEnabled {
-		log.Printf("Fake sensor readings are ENABLED")
-		sensorsPath = "/fake/devices"
-		switchToFakeFs()
-		return
-	}
-	// Use real sensors
-	sensorsPath = "/sys/bus/w1/devices"
-}
-
-func GetAllSensors() []string {
+func GetAllSensors(fs afero.Afero) ([]string, error) {
+	sensors := make([]string, 0)
 	// Check if dir exists
-	if exists, _ := afs.DirExists(sensorsPath); !exists {
-		log.Fatalf("%v does not exist or is not a directory", sensorsPath)
+	exists, err := fs.DirExists(SensorsPath)
+	if !exists {
+		err := errors.New(SensorsPath + " does not exist or is not a directory")
+		return sensors, err
+	} else if err != nil {
+		return sensors, err
 	}
 	// Get the directory content
-	sensorsDir, _ := afs.ReadDir(sensorsPath)
+	sensorsDir, _ := fs.ReadDir(SensorsPath)
 	// Turn it into a list of sensors
-	sensors := make([]string, 0)
 	for _, sensor := range sensorsDir {
 		if name := sensor.Name(); !strings.HasPrefix(name, "w1_bus_master") {
 			sensors = append(sensors, name)
 		}
 	}
-	return sensors
+	return sensors, nil
 }
 
 type SensorReading struct {
@@ -70,34 +40,40 @@ type SensorReading struct {
 	Resolution  int     `json:"resolution"`
 }
 
-func GetReadings(sensors []string) []SensorReading {
-	// verbose := viper.GetBool("verbose")
+func GetReadings(fs afero.Afero, sensors []string) ([]SensorReading, error) {
 	// Read values for each sensor
 	readings := make([]SensorReading, 0)
 	for _, sensorId := range sensors {
 		// Paths
-		sensorBasePath := sensorsPath + "/" + sensorId
+		sensorBasePath := SensorsPath + "/" + sensorId
 		temperaturePath := sensorBasePath + "/temperature"
 		resolutionPath := sensorBasePath + "/resolution"
 		// File access
-		temperatureFile, errT := afs.ReadFile(temperaturePath)
-		resolutionFile, errR := afs.ReadFile(resolutionPath)
-		if errT == nil && errR == nil {
-			// Remove trailing \n and convert
-			rawTemperature, errT := strconv.Atoi(strings.TrimSpace(string(temperatureFile)))
-			temperature := float32(rawTemperature) / 1000
-			resolution, errR := strconv.Atoi(strings.TrimSpace(string(resolutionFile)))
-			if errT == nil && errR == nil {
-				// Temperature has to be divided 1000
-				readings = append(readings, SensorReading{SensorHwId: sensorId, Temperature: temperature, Resolution: resolution})
-			} else {
-				log.Printf("R1: %v: %v", sensorBasePath, errT)
-				log.Printf("R2: %v: %v", sensorBasePath, errR)
-			}
-		} else {
-			log.Printf("R3: %v: %v", sensorBasePath, errT)
-			log.Printf("R4: %v: %v", sensorBasePath, errR)
+		temperatureFile, readTempErr := fs.ReadFile(temperaturePath)
+		if readTempErr != nil {
+			return nil, readTempErr
 		}
+		resolutionFile, readResErr := fs.ReadFile(resolutionPath)
+		if readResErr != nil {
+			return nil, readResErr
+		}
+		// Temparature, remove trailing \n and convert
+		rawTemperature, convTempErr := strconv.Atoi(strings.TrimSpace(string(temperatureFile)))
+		if convTempErr != nil {
+			return nil, convTempErr
+		}
+		temperature := float32(rawTemperature) / 1000 // Temperature has to be divided by 1000
+		// Resolution, must be positive
+		resolution, convResErr := strconv.Atoi(strings.TrimSpace(string(resolutionFile)))
+		if convResErr != nil {
+			return nil, convResErr
+		}
+		if resolution <= 0 {
+			return nil, errors.New("resolution must be positive")
+		}
+		// Add results to array
+		readings = append(readings, SensorReading{SensorHwId: sensorId, Temperature: temperature, Resolution: resolution})
 	}
-	return readings
+	// Everything went fine, return readings
+	return readings, nil
 }

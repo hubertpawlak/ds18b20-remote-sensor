@@ -37,9 +37,8 @@ func SendReadings(readings []SensorReading) {
 		// FIXME: close connection (or somehow cache/reuse)
 		if err != nil {
 			log.Printf("%v", err)
-		} else {
-			defer res.Body.Close()
 		}
+		defer res.Body.Close()
 		if verbose && res != nil {
 			log.Printf("Endpoint returned %v", res.Status)
 		}
