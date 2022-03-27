@@ -1,3 +1,6 @@
+/*
+Copyright © 2022 Hubert Pawlak <hubertpawlak.dev>
+*/
 package helpers
 
 import (
