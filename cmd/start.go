@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	"github.com/hubertpawlak/ds18b20-remote-sensor/cmd/helpers"
@@ -32,6 +33,7 @@ connected using 1-Wire to your specified endpoint.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		verbose := viper.GetBool("verbose")
 		// Setup ticker
 		ticker := time.NewTicker(time.Duration(viper.GetUint("interval")) * time.Millisecond)
 		defer ticker.Stop()
@@ -43,12 +45,14 @@ connected using 1-Wire to your specified endpoint.`,
 			// Sensors may be connected/disconnected at any time
 			if sensors, err := helpers.GetAllSensors(fs); err == nil {
 				if readings, err := helpers.GetReadings(fs, sensors); err == nil {
-					helpers.SendReadings(readings)
+					if err := helpers.SendReadings(readings, viper.GetString("endpoint"), viper.GetString("token"), verbose); err != nil && verbose {
+						log.Print(err)
+					}
 				} else {
-					panic(err)
+					log.Print(err)
 				}
 			} else {
-				panic(err)
+				log.Fatal(err)
 			}
 			// TODO: measure measurement time and increase interval if greater than current interval
 			// ticker.Reset() + viper.set
@@ -59,18 +63,13 @@ connected using 1-Wire to your specified endpoint.`,
 func init() {
 	rootCmd.AddCommand(startCmd)
 
-	// TODO: multiple endpoints
-	// startCmd.Flags().StringArrayP("endpoint", "e", "destination(s) of your readings")
-	startCmd.Flags().StringP("endpoint", "e", "", "destination of your readings (API)")
+	startCmd.Flags().StringP("endpoint", "e", "", "destination of your readings")
 	startCmd.Flags().UintP("interval", "i", 5000, "time between readings (in ms)")
 	startCmd.Flags().StringP("token", "t", "", "secret key used to authorize requests")
 	startCmd.Flags().Int("led", 0, "output GPIO PIN number")
-	startCmd.Flags().Bool("readOnly", false, "print readings instead of sending (useful for testing)")
-	startCmd.Flags().MarkDeprecated("readOnly", "it will be removed in the next version")
 
 	viper.BindPFlag("endpoint", startCmd.Flags().Lookup("endpoint"))
 	viper.BindPFlag("interval", startCmd.Flags().Lookup("interval"))
 	viper.BindPFlag("token", startCmd.Flags().Lookup("token"))
 	viper.BindPFlag("led", startCmd.Flags().Lookup("led"))
-	viper.BindPFlag("readOnly", startCmd.Flags().Lookup("readOnly"))
 }
