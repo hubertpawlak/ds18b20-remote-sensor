@@ -10,8 +10,6 @@ import (
 	"testing"
 )
 
-// TODO: http mocking
-
 func TestSendReadings(t *testing.T) {
 	type args struct {
 		readings []SensorReading
