@@ -35,7 +35,7 @@ func GetAllSensors(fs afero.Afero) ([]string, error) {
 }
 
 type SensorReading struct {
-	SensorHwId  string  `json:"sensorHwId"`
+	SensorHwId  string  `json:"hwId"`
 	Temperature float32 `json:"temperature"`
 	Resolution  int     `json:"resolution"`
 }
@@ -57,7 +57,7 @@ func GetReadings(fs afero.Afero, sensors []string) ([]SensorReading, error) {
 		if readResErr != nil {
 			return nil, readResErr
 		}
-		// Temparature, remove trailing \n and convert
+		// Temperature, remove trailing \n and convert
 		rawTemperature, convTempErr := strconv.Atoi(strings.TrimSpace(string(temperatureFile)))
 		if convTempErr != nil {
 			return nil, convTempErr
