@@ -1,5 +1,5 @@
 # What is ds18b20-remote-sensor?
-This is a simple program to periodically read temperatures from 1-Wire sensors and send them to a specified endpoint. Easy to run as a systemd service.
+This is a simple program to periodically read temperatures from 1-Wire sensors and send them to a specified endpoint. Easy to run as a systemd service. Tested on Raspberry Pi Zero.
 
 # Request content
 This program send an HTTP POST request with JSON containing  multiple readings. Here is an example:
@@ -30,17 +30,22 @@ interval: 8000
 - **token** - `Bearer` token sent in `Authorization` header
 - **interval** - time between reading all temperatures in milliseconds
 
-# How to use?
-## Step 1 - Build
+# How to build?
+You need [Go](https://go.dev/) to compile this project. [Install Go](https://go.dev/doc/install) before proceeding.
+## Step 1 - Get all dependencies
+```bash
+go get
+```
+## Step 2 - Compile
 ```bash
 GOOS=linux GOARCH=arm go build
 ```
-Adjust `GOOS` and `GOARCH` if you are cross-compiling or simply run
+Adjust `GOOS` and `GOARCH` if you are cross-compiling (like me) or simply run
 ```bash
 go build
 ```
 on your machine with sensors
-## Step 2 - Use the compiled binary
+## Step 3 - Run
 ```bash
 ./ds18b20-remote-sensor --help
 ```
