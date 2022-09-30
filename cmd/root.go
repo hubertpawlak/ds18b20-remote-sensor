@@ -13,9 +13,8 @@ var customConfigFile string
 var rootCmd = &cobra.Command{
 	Use:   "ds18b20-remote-sensor",
 	Short: "This program sends temperature readings",
-	Long: `This program periodically sends temperature readings (from 1-Wire sensors)
-to a remote server using HTTP POST requests.
-It supports Bearer token authentication, self-signed SSL certificates and LED output.`,
+	Long: `This is a simple program to periodically read temperatures from 1-Wire sensors and send them to a specified endpoint.
+It supports Bearer token authentication.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
