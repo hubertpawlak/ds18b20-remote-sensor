@@ -16,7 +16,7 @@ This program send an HTTP POST request with JSON containing  multiple readings. 
   },
 ]
 ```
-- **hwId** - 1-Wire sensor id
+- **hw_id** - 1-Wire sensor id
 - **resolution** - sensor resolution in bits
 - **temperature** - temperature in Celsius
 
