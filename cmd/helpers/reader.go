@@ -32,7 +32,7 @@ func GetAllSensors(fs afero.Afero) ([]string, error) {
 }
 
 type SensorReading struct {
-	SensorHwId  string  `json:"hwId"`
+	SensorHwId  string  `json:"hw_id"`
 	Temperature float32 `json:"temperature"`
 	Resolution  int     `json:"resolution"`
 }

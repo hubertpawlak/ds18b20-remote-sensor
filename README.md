@@ -6,11 +6,11 @@ This program send an HTTP POST request with JSON containing  multiple readings. 
 ```json
 [
   {
-    "hwId": "sensorId1",
+    "hw_id": "sensorId1",
     "resolution": 12,
     "temperature": 100
   },{
-    "hwId": "sensorId2",
+    "hw_id": "sensorId2",
     "resolution": 10,
     "temperature": 23
   },
